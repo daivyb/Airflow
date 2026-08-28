@@ -12,9 +12,14 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
     AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
-    # Conexiones a SQL Server local (host.docker.internal apunta al host Windows)
-    AIRFLOW_CONN_SQLSERVER_ORIGEN: 'mssql+pymssql://airflow_dev:Airflow2025!@host.docker.internal:1433/ProfonanpeOrigen'
-    AIRFLOW_CONN_SQLSERVER_DW: 'mssql+pymssql://airflow_dev:Airflow2025!@host.docker.internal:1433/ProfonanpeDW'
+    # Conexiones inyectadas desde el archivo .env (Seguridad Nivel 1)
+    AIRFLOW_CONN_SQLSERVER_ORIGEN: ${AIRFLOW_CONN_SQLSERVER_ORIGEN}
+    AIRFLOW_CONN_SQLSERVER_DW: ${AIRFLOW_CONN_SQLSERVER_DW}
+    
+    # Credenciales de VTrack inyectadas como Variables Globales de Airflow
+    AIRFLOW_VAR_VTRACK_USER: ${AIRFLOW_VAR_VTRACK_USER}
+    AIRFLOW_VAR_VTRACK_PASS: ${AIRFLOW_VAR_VTRACK_PASS}
+    AIRFLOW_VAR_VTRACK_URL: ${AIRFLOW_VAR_VTRACK_URL}
   extra_hosts:
     - "host.docker.internal:host-gateway"
   volumes:

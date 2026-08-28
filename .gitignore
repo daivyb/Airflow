@@ -1,0 +1,24 @@
+# Entornos virtuales y Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Archivos de entorno y seguridad (MUY IMPORTANTE)
+.env
+
+# Datos locales
+data/
+*.xlsb
+*.xlsx
+*.csv
+
+# Logs
+logs/
+*.log
+
+# Datos
+data/*
+!data/.gitkeep
