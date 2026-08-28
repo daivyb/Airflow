@@ -62,9 +62,9 @@ with DAG(
         task_id="scrape_vtrack",
         bash_command='python /opt/airflow/dags/scripts/scrape_vtrack.py',
         env={
-            "VTRACK_URL": "{{ var.value.get('vtrack_url', 'https://www.vtrack.cl') }}",
-            "VTRACK_USER": "{{ var.value.get('vtrack_user', '') }}",
-            "VTRACK_PASS": "{{ var.value.get('vtrack_pass', '') }}",
+            "VTRACK_URL": "{{ var.value.get('VTRACK_URL', 'https://profonanpe.vtrack.cl') }}",
+            "VTRACK_USER": "{{ var.value.get('VTRACK_USER', '') }}",
+            "VTRACK_PASS": "{{ var.value.get('VTRACK_PASS', '') }}",
             "OUTPUT_PATH": "/opt/airflow/data/reporte_completo.xlsx",
         },
     )
