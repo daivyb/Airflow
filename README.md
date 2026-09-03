@@ -16,23 +16,30 @@ Este proyecto representa la migración automatizada de los procesos de transform
 
 ## 🚀 Instalación y Despliegue
 
-### 1. Construir e iniciar contenedores
+### 1. Configuración de Variables de Entorno (`.env`)
+Antes de iniciar los contenedores, crea un archivo `.env` en la raíz del proyecto copiando la plantilla provista:
+```bash
+cp .env.example .env
+```
+Edita `.env` con las credenciales correspondientes a tu entorno:
+- `AIRFLOW_CONN_SQLSERVER_ORIGEN`: Cadena de conexión a la base de datos origen.
+- `AIRFLOW_CONN_SQLSERVER_DW`: Cadena de conexión al Data Warehouse.
+- `AIRFLOW_VAR_VTRACK_USER`, `AIRFLOW_VAR_VTRACK_PASS`, `AIRFLOW_VAR_VTRACK_URL`: Credenciales y URL de VTrack.
+
+> **Seguridad y Cero Configuración Manual:**  
+> Gracias a este archivo, las credenciales no quedan en el código fuente. Airflow inyecta automáticamente las conexiones (`sqlserver_origen`, `sqlserver_dw`) y las variables globales (`VTRACK_*`) directamente en su base de datos. **No es necesario configurar nada manualmente en la interfaz web.**
+
+### 2. Construir e iniciar contenedores
 Ubicarse en la raíz del proyecto y ejecutar:
 ```bash
 docker compose up -d --build
 ```
-Esto reconstruirá la imagen (instalando Playwright) y levantará los servicios (`postgres` interno, `scheduler` y `webserver`).
+Esto reconstruirá la imagen (instalando Playwright, Chromium y librerías necesarias) y levantará los servicios (`postgres` interno, `scheduler` y `webserver`).
 
-### 2. Configuración en la interfaz de Airflow
-Accede a http://localhost:8080 (Admin: `airflow` / `airflow`).
-
-**Conexiones de Bases de Datos (`Admin > Connections`)**:
-¡No necesitas configurarlas manualmente! Las conexiones a tu SQL Server local (`sqlserver_origen` y `sqlserver_dw`) ya están inyectadas automáticamente desde el archivo `docker-compose.yaml` a través de variables de entorno (`AIRFLOW_CONN_...`). No tienes que hacer nada aquí.
-
-**Variables Globales (`Admin > Variables`)**:
-- `VTRACK_URL`: URL base de la plataforma (ej. `https://profonanpe.vtrack.cl`).
-- `VTRACK_USER`: Correo de acceso a VTrack.
-- `VTRACK_PASS`: Contraseña de VTrack.
+### 3. Acceso a la interfaz web de Airflow
+Accede desde tu navegador a **http://localhost:8080** (o la IP del servidor en el puerto 8080):
+- **Usuario:** `admin`
+- **Contraseña:** `admin`
 
 ---
 
@@ -67,10 +74,35 @@ df_insert[col] = df_insert[col].astype(object).where(pd.notna(df_insert[col]), N
 **Problema:** Los scripts de Python (usando `pymssql`) que corrían dentro de Docker fallaban al intentar autenticarse en SQL Server ya que este únicamente esperaba credenciales automáticas de Windows (Windows Authentication), protocolo que un contenedor Linux no maneja nativamente de manera sencilla.
 **Solución:** Se tuvo que habilitar el modo de **Autenticación Mixta** (SQL Server and Windows Authentication mode) en las propiedades del servidor (en SSMS). Esto permitió crear y utilizar un usuario local clásico de SQL Server (ej. usuario `sa` o crear uno de servicio dedicado) con el cual Airflow puede autenticarse de forma universal pasando un nombre de usuario y contraseña en texto plano en la cadena de conexión.
 
+### 6. Escape de caracteres especiales en contraseñas (`$` / `$$`) en Docker Compose
+**Problema:** Si una contraseña contiene el símbolo de dólar (por ejemplo `Boss30$$PF`), Docker Compose interpreta el `$` como una variable de entorno a sustituir, devorando caracteres y enviando una clave errónea a VTrack (ej. `Boss30$PF`), lo que ocasionaba un bloqueo en el login.
+**Solución:** En archivos `.env` consumidos por Docker Compose, el símbolo `$` debe escaparse con otro `$`. Por tanto, para enviar dos signos de dólar literales (`$$`), en el archivo `.env` debe escribirse como cuádruple dólar: `Boss30$$$$PF`.
+
+### 7. Sensibilidad a Mayúsculas/Minúsculas en Variables de Airflow (Jinja)
+**Problema:** Al inyectar variables de entorno con el prefijo `AIRFLOW_VAR_`, Airflow las registra automáticamente en su base de datos interna con claves en **MAYÚSCULAS** (ej. `VTRACK_USER`). Si en el DAG de Python se consulta mediante Jinja en minúsculas `{{ var.value.get('vtrack_user') }}`, Airflow devuelve una cadena vacía.
+**Solución:** Mantener estricta coherencia en los identificadores de variables en los DAGs utilizando siempre mayúsculas cuando provengan de inyecciones del sistema: `{{ var.value.get('VTRACK_USER') }}`.
+
 ---
 
-## 🏃 Ejecución
-Para iniciar el pipeline, navega a la pestaña de `DAGs` en Airflow, y dale a **Trigger DAG (Play)** en el DAG `finanzas_etl_pipeline`.
+## 🏃 Ejecución y Operación
 
-1. **scrape_vtrack**: Irá de forma silenciosa a VTrack y descargará el archivo en el volumen persistente de la carpeta `data/`.
-2. **transformar_finanzas**: Leerá SQL Server, procesará todo usando Python, y actualizará de forma destructiva (`drop and replace`) el Data Warehouse con los datos más recientes.
+### Ejecución Manual del Pipeline
+1. Ingresa a la interfaz web de Airflow (http://localhost:8080).
+2. Localiza el DAG **`finanzas_etl_pipeline`**.
+3. Haz clic en el botón de **Play (Trigger DAG)** a la derecha.
+   - **`scrape_vtrack`**: Ejecuta el navegador headless, inicia sesión en VTrack y descarga el reporte en `data/reporte_completo.xlsx`.
+   - **`transformar_finanzas`**: Extrae la data de SQL Server origen, procesa el cruce y actualiza de forma destructiva (`drop and replace`) el Data Warehouse con los datos más recientes.
+
+### Pausar y Reanudar el Servicio
+Para no consumir recursos en la máquina cuando no se esté utilizando, se recomienda pausar los contenedores en lugar de destruirlos (conservando el estado y la base de datos intacta):
+
+- **Pausar los servicios:**
+  ```bash
+  docker compose stop
+  ```
+- **Reanudar los servicios:**
+  ```bash
+  docker compose start
+  ```
+*(Esto enciende el entorno en segundos sin necesidad de reconstruir imágenes ni reconfigurar nada).*
+
