@@ -74,11 +74,7 @@ df_insert[col] = df_insert[col].astype(object).where(pd.notna(df_insert[col]), N
 **Problema:** Los scripts de Python (usando `pymssql`) que corrían dentro de Docker fallaban al intentar autenticarse en SQL Server ya que este únicamente esperaba credenciales automáticas de Windows (Windows Authentication), protocolo que un contenedor Linux no maneja nativamente de manera sencilla.
 **Solución:** Se tuvo que habilitar el modo de **Autenticación Mixta** (SQL Server and Windows Authentication mode) en las propiedades del servidor (en SSMS). Esto permitió crear y utilizar un usuario local clásico de SQL Server (ej. usuario `sa` o crear uno de servicio dedicado) con el cual Airflow puede autenticarse de forma universal pasando un nombre de usuario y contraseña en texto plano en la cadena de conexión.
 
-### 6. Escape de caracteres especiales en contraseñas (`$` / `$$`) en Docker Compose
-**Problema:** Si una contraseña contiene el símbolo de dólar (por ejemplo `Boss30$$PF`), Docker Compose interpreta el `$` como una variable de entorno a sustituir, devorando caracteres y enviando una clave errónea a VTrack (ej. `Boss30$PF`), lo que ocasionaba un bloqueo en el login.
-**Solución:** En archivos `.env` consumidos por Docker Compose, el símbolo `$` debe escaparse con otro `$`. Por tanto, para enviar dos signos de dólar literales (`$$`), en el archivo `.env` debe escribirse como cuádruple dólar: `Boss30$$$$PF`.
-
-### 7. Sensibilidad a Mayúsculas/Minúsculas en Variables de Airflow (Jinja)
+### 6. Sensibilidad a Mayúsculas/Minúsculas en Variables de Airflow (Jinja)
 **Problema:** Al inyectar variables de entorno con el prefijo `AIRFLOW_VAR_`, Airflow las registra automáticamente en su base de datos interna con claves en **MAYÚSCULAS** (ej. `VTRACK_USER`). Si en el DAG de Python se consulta mediante Jinja en minúsculas `{{ var.value.get('vtrack_user') }}`, Airflow devuelve una cadena vacía.
 **Solución:** Mantener estricta coherencia en los identificadores de variables en los DAGs utilizando siempre mayúsculas cuando provengan de inyecciones del sistema: `{{ var.value.get('VTRACK_USER') }}`.
 

@@ -22,3 +22,16 @@ logs/
 # Datos
 data/*
 !data/.gitkeep
+
+# Archivos de análisis y exploración de datos (no son parte del entregable)
+BI-FINANCIERA/
+*.pbix
+
+# Archivos de configuración de herramientas internas (no entregar)
+.agents/
+AGENTS.md
+
+# Scripts de desarrollo y prueba (no son parte del entregable de producción)
+setup_dev_databases.py
+propuesta_gerencial.html
+prueba_reporte.xlsx
