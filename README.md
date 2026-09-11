@@ -1,4 +1,4 @@
-# Proyecto ETL Finanzas - Profonanpe (Migración a Apache Airflow)
+# Proyecto ETL Finanzas - (Migración a Apache Airflow)
 
 Este proyecto representa la migración automatizada de los procesos de transformación financiera (previamente ejecutados en scripts de Python sueltos y planillas `.xlsb` locales) hacia una arquitectura moderna, orquestada y automatizada utilizando **Apache Airflow sobre Docker**.
 
