@@ -2,7 +2,7 @@
 
 Este proyecto representa la migración automatizada de los procesos de transformación financiera (previamente ejecutados en scripts de Python sueltos y planillas `.xlsb` locales) hacia una arquitectura moderna, orquestada y automatizada utilizando **Apache Airflow sobre Docker**.
 
-## 🏗️ Arquitectura del Sistema
+## Arquitectura del Sistema
 
 1. **Apache Airflow**: Desplegado localmente utilizando Docker Compose (`LocalExecutor`).
 2. **Scraper VTrack**: 
@@ -14,7 +14,7 @@ Este proyecto representa la migración automatizada de los procesos de transform
 
 ---
 
-## 🚀 Instalación y Despliegue
+## Instalación y Despliegue
 
 ### 1. Configuración de Variables de Entorno (`.env`)
 Antes de iniciar los contenedores, crea un archivo `.env` en la raíz del proyecto copiando la plantilla provista:
@@ -43,7 +43,7 @@ Accede desde tu navegador a **http://localhost:8080** (o la IP del servidor en e
 
 ---
 
-## 🛠️ Lecciones Aprendidas y Solución de Errores Comunes
+## Lecciones Aprendidas y Solución de Errores Comunes
 
 Durante el desarrollo e implementación, se solventaron obstáculos técnicos relevantes que quedan documentados aquí como referencia a futuro:
 
@@ -80,7 +80,7 @@ df_insert[col] = df_insert[col].astype(object).where(pd.notna(df_insert[col]), N
 
 ---
 
-## 🏃 Ejecución y Operación
+## Ejecución y Operación
 
 ### Ejecución Manual del Pipeline
 1. Ingresa a la interfaz web de Airflow (http://localhost:8080).
