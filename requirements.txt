@@ -1,0 +1,6 @@
+pymssql==2.2.11
+pandas==2.2.2
+numpy==1.26.4
+openpyxl==3.1.5
+pyxlsb==1.0.10
+playwright==1.45.0

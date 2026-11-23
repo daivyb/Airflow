@@ -1,0 +1,42 @@
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# Environment secrets (never commit)
+.env
+.env.*
+!.env.example
+
+# Airflow runtime logs and local databases
+logs/
+*.log
+airflow.db
+airflow-webserver.pid
+
+# Runtime downloads, staging bundles, and error captures
+data/*
+!data/.gitkeep
+!data/sample/
+!data/sample/*.xlsx
+data/staging/
+data/errors/
+
+# Raw spreadsheets and Power BI binaries
+*.xlsb
+*.xlsx
+*.pbix
+*.csv
+!data/sample/*.xlsx
+
+# Local agent and IDE artifacts
+.agents/
+AGENTS.md
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

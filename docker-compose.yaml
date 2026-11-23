@@ -1,0 +1,105 @@
+# =============================================================================
+# Apache Airflow Financial Data Warehouse ETL Stack
+# Executor: LocalExecutor | Metadata Store: PostgreSQL 15
+# =============================================================================
+
+x-airflow-common: &airflow-common
+  build: .
+  environment: &airflow-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER:-airflow}:${POSTGRES_PASSWORD:-airflow}@postgres:5432/${POSTGRES_DB:-airflow}
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:-}
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'false'
+    AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+    # SQL Server connections injected from .env
+    AIRFLOW_CONN_SQLSERVER_SOURCE: ${AIRFLOW_CONN_SQLSERVER_SOURCE}
+    AIRFLOW_CONN_SQLSERVER_DW: ${AIRFLOW_CONN_SQLSERVER_DW}
+    # Grant portal extractor configuration injected as Airflow Variables
+    AIRFLOW_VAR_PORTAL_URL: ${AIRFLOW_VAR_PORTAL_URL}
+    AIRFLOW_VAR_PORTAL_USER: ${AIRFLOW_VAR_PORTAL_USER}
+    AIRFLOW_VAR_PORTAL_PASS: ${AIRFLOW_VAR_PORTAL_PASS}
+    AIRFLOW_VAR_PORTAL_LOGIN_PATH: ${AIRFLOW_VAR_PORTAL_LOGIN_PATH:-/users/sign_in}
+    AIRFLOW_VAR_PORTAL_REPORT_PATH: ${AIRFLOW_VAR_PORTAL_REPORT_PATH:-/entities/catalog}
+    # ETL pipeline parameters
+    AIRFLOW_VAR_SOURCE_TABLE: ${AIRFLOW_VAR_SOURCE_TABLE:-dbo.FinanzasProyectos}
+    AIRFLOW_VAR_SPLIT_PROJECT_CODES: ${AIRFLOW_VAR_SPLIT_PROJECT_CODES:-900}
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./data:/opt/airflow/data
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-airflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-airflow}
+      POSTGRES_DB: ${POSTGRES_DB:-airflow}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-airflow} -d ${POSTGRES_DB:-airflow}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db migrate
+        airflow users create \
+          --username "${AIRFLOW_ADMIN_USER:-admin}" \
+          --password "${AIRFLOW_ADMIN_PASSWORD:-admin}" \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email "${AIRFLOW_ADMIN_EMAIL:-admin@example.com}" || true
+    restart: "no"
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: airflow scheduler
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname \"$$(hostname)\""]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: airflow webserver
+    ports:
+      - "${AIRFLOW_WEBSERVER_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
